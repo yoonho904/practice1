@@ -1,0 +1,20 @@
+{
+  "name": "@bio-sim/event-schemas",
+  "version": "0.1.0",
+  "description": "Shared message contracts for the bio system simulator event bus.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "lint": "eslint \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "type": "module"
+}

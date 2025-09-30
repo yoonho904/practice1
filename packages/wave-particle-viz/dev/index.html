@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave-Particle Quantum Visualization - Development</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #quantum-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            min-width: 320px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .controls-header h3 {
+            margin: 0;
+            color: #4CAF50;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 18px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #bbb;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .control-group input[type="range"] {
+            background: transparent;
+            height: 6px;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .orbital-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .orbital-btn {
+            padding: 10px;
+            background: rgba(76, 175, 80, 0.15);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .orbital-btn:hover {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: rgba(76, 175, 80, 0.7);
+            transform: translateY(-1px);
+        }
+
+        .orbital-btn.active {
+            background: rgba(76, 175, 80, 0.8);
+            border-color: #4CAF50;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: auto;
+            transform: scale(1.2);
+        }
+
+        #performance {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 16px;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 200px;
+        }
+
+        .perf-title {
+            color: #4CAF50;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .perf-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .perf-label {
+            color: #aaa;
+        }
+
+        .perf-value {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 18px;
+            border-radius: 12px;
+            color: white;
+            max-width: 420px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-title {
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #4CAF50;
+            font-size: 16px;
+        }
+
+        .info-content {
+            line-height: 1.5;
+            color: #ddd;
+        }
+
+        .info-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .info-content li {
+            margin-bottom: 4px;
+        }
+
+        .info-content strong {
+            color: #fff;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(76, 175, 80, 0.3);
+            border-top: 2px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .value-display {
+            display: inline-block;
+            min-width: 40px;
+            text-align: right;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="quantum-canvas"></canvas>
+
+        <div id="controls">
+            <div class="controls-header">
+                <h3>⚛️ Quantum Visualization Controls</h3>
+            </div>
+
+            <div class="control-group">
+                <label>Element System</label>
+                <select id="element-select">
+                    <option value="1,0">Hydrogen (H)</option>
+                    <option value="2,1">Helium Ion (He⁺)</option>
+                    <option value="3,2">Lithium Ion (Li²⁺)</option>
+                    <option value="6,5">Carbon Ion (C⁵⁺)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Quantum Orbital</label>
+                <div class="orbital-buttons">
+                    <button class="orbital-btn active" data-orbital="1s" data-n="1" data-l="0">1s</button>
+                    <button class="orbital-btn" data-orbital="2s" data-n="2" data-l="0">2s</button>
+                    <button class="orbital-btn" data-orbital="2p" data-n="2" data-l="1">2p</button>
+                    <button class="orbital-btn" data-orbital="3s" data-n="3" data-l="0">3s</button>
+                    <button class="orbital-btn" data-orbital="3p" data-n="3" data-l="1">3p</button>
+                    <button class="orbital-btn" data-orbital="3d" data-n="3" data-l="2">3d</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Particle Count: <span class="value-display" id="particle-count-value">5000</span></label>
+                <input type="range" id="particle-count" min="1000" max="15000" step="500" value="5000">
+            </div>
+
+            <div class="control-group">
+                <label>Quantum Noise: <span class="value-display" id="noise-value">0.15</span></label>
+                <input type="range" id="noise-strength" min="0" max="0.5" step="0.01" value="0.15">
+            </div>
+
+            <div class="control-group">
+                <label>Wave Following: <span class="value-display" id="wave-value">0.8</span></label>
+                <input type="range" id="wave-following" min="0" max="1" step="0.01" value="0.8">
+            </div>
+
+            <div class="control-group">
+                <label>Animation Speed: <span class="value-display" id="speed-value">1.0</span></label>
+                <input type="range" id="animation-speed" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="control-group">
+                <label>Droplet Size: <span class="value-display" id="size-value">1.0</span></label>
+                <input type="range" id="droplet-size" min="0.5" max="2.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="control-group">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="enable-slicing">
+                    <label for="enable-slicing">Enable Orbital Slicing</label>
+                </div>
+            </div>
+        </div>
+
+        <div id="performance">
+            <div class="perf-title">⚡ Performance Monitor</div>
+            <div class="perf-item">
+                <span class="perf-label">FPS:</span>
+                <span class="perf-value" id="fps">--</span>
+            </div>
+            <div class="perf-item">
+                <span class="perf-label">Frame Time:</span>
+                <span class="perf-value" id="frame-time">--</span>
+            </div>
+            <div class="perf-item">
+                <span class="perf-label">Particles:</span>
+                <span class="perf-value"><span id="visible-particles">--</span>/<span id="total-particles">--</span></span>
+            </div>
+            <div class="perf-item">
+                <span class="perf-label">Memory:</span>
+                <span class="perf-value" id="memory">--</span>
+            </div>
+            <div class="perf-item">
+                <span class="perf-label">Density:</span>
+                <span class="perf-value" id="avg-density">--</span>
+            </div>
+        </div>
+
+        <div id="info">
+            <div class="info-title">🌊 Wave-Particle Duality Visualization</div>
+            <div class="info-content">
+                <p>This visualization demonstrates quantum mechanics by showing electrons as individual droplets that follow wave function patterns with natural uncertainty.</p>
+                <p><strong>Features:</strong></p>
+                <ul>
+                    <li>Real quantum wave functions from Schrödinger equation</li>
+                    <li>Research-grade accuracy using hydrogen-like solutions</li>
+                    <li>Interactive orbital slicing (move mouse when enabled)</li>
+                    <li>High-performance WebGL rendering (60fps target)</li>
+                    <li>Quantum noise represents uncertainty principle</li>
+                </ul>
+                <p><strong>Controls:</strong> Mouse movement slices orbitals • All parameters update in real-time</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <span>Loading Quantum Engine...</span>
+    </div>
+
+    <script type="module" src="/dev/main.ts"></script>
+</body>
+</html>

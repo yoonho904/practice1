@@ -1,0 +1,34 @@
+{
+  "name": "@bio-sim/simulation-director",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx --watch src/index.ts",
+    "start": "node --enable-source-maps dist/index.js",
+    "clean": "rimraf dist",
+    "test": "if ls dist/**/*.test.js >/dev/null 2>&1; then node --test dist/**/*.test.js; else echo 'No tests found for simulation-director'; fi",
+    "lint": "eslint \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@bio-sim/atomic-data": "^0.1.0",
+    "@bio-sim/biology-engine": "^0.1.0",
+    "@bio-sim/chemistry-engine": "^0.1.0",
+    "@bio-sim/data-broker": "^0.1.0",
+    "@bio-sim/event-bus": "^0.1.0",
+    "@bio-sim/event-schemas": "^0.1.0",
+    "@bio-sim/physics-engine": "^0.1.0",
+    "uuid": "^9.0.1",
+    "ws": "^8.15.1",
+    "@bio-sim/contracts": "^0.1.0",
+    "@bio-sim/orbital-engine": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/ws": "^8.5.8",
+    "typescript": "^5.3.3"
+  }
+}
