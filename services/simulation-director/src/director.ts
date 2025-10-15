@@ -34,7 +34,7 @@ export class SimulationDirector {
   private environment: { temperature: number; pressureAtm: number; ph: number; };
   private timestep = 0;
 
-  constructor(private readonly config: SimulationDirectorConfig = defaultConfig) {
+  constructor(config: SimulationDirectorConfig = defaultConfig) {
     this.bus = createEventBus();
     this.dataBroker = createDataBroker();
     this.environment = { ...resolvedEnvironment(config) };

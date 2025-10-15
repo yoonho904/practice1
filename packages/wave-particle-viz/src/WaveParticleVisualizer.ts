@@ -47,12 +47,12 @@ export interface PerformanceMetrics {
  * Provides simple API for complex quantum visualization
  */
 export class WaveParticleVisualizer {
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
-  private atom: HydrogenLikeAtom;
-  private physicsSystem: WaveParticleSystem;
-  private dropletRenderer: DropletRenderer;
+  private scene!: THREE.Scene;
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
+  private atom!: HydrogenLikeAtom;
+  private physicsSystem!: WaveParticleSystem;
+  private dropletRenderer!: DropletRenderer;
   private controls: VisualizationControls;
 
   // Performance monitoring

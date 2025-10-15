@@ -53,7 +53,7 @@ export class WaveParticleSystem {
 
   // Performance optimization: Pre-allocated arrays
   private readonly tempVector = new THREE.Vector3();
-  private readonly wavePositions: Float32Array;
+  // private readonly wavePositions: Float32Array; // Reserved for future wave interpolation
   private readonly noiseSeeds: Float32Array;
 
   constructor(
@@ -74,7 +74,7 @@ export class WaveParticleSystem {
     };
 
     // Pre-allocate for performance
-    this.wavePositions = new Float32Array(this.config.particleCount * 3);
+    // this.wavePositions = new Float32Array(this.config.particleCount * 3); // Reserved for future
     this.noiseSeeds = new Float32Array(this.config.particleCount * 4);
 
     this.initializeDroplets();

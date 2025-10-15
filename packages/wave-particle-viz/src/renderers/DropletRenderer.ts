@@ -101,16 +101,16 @@ export interface DropletRenderConfig {
  */
 export class DropletRenderer {
   private scene: THREE.Scene;
-  private material: THREE.ShaderMaterial;
-  private geometry: THREE.BufferGeometry;
-  private points: THREE.Points;
+  private material!: THREE.ShaderMaterial;
+  private geometry!: THREE.BufferGeometry;
+  private points!: THREE.Points;
   private system: WaveParticleSystem;
   private config: DropletRenderConfig;
 
   // Buffer attributes for dynamic updates
-  private positionAttribute: THREE.BufferAttribute;
-  private opacityAttribute: THREE.BufferAttribute;
-  private sizeAttribute: THREE.BufferAttribute;
+  private positionAttribute!: THREE.BufferAttribute;
+  private opacityAttribute!: THREE.BufferAttribute;
+  private sizeAttribute!: THREE.BufferAttribute;
 
   constructor(
     scene: THREE.Scene,
