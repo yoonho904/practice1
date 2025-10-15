@@ -118,6 +118,8 @@ export class LODManager {
   private performanceHistory: PerformanceMetrics[] = [];
   private lastLODChange = 0;
   private listeners = new Set<(newLOD: LODLevel, config: LODConfig) => void>();
+  private pendingLODChange: LODLevel | null = null;
+  private pendingLODTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config: Partial<LODManagerConfig> = {}) {
     this.config = {
@@ -154,24 +156,24 @@ export class LODManager {
 
   private evaluateAndAdaptLOD(): void {
     const now = Date.now();
-    if (now - this.lastLODChange < this.config.hysteresis) {
-      return; // Too soon to change again
-    }
 
     const avgFPS = this.calculateAverageFPS();
     const avgFrameTime = this.calculateAverageFrameTime();
+    const frameTimeTarget = 1000 / this.config.targetFPS;
 
     let newTargetLOD = this.currentLOD;
 
     // Determine if we need to decrease quality (increase LOD level)
-    if (avgFPS < this.config.minFPS) {
+    if (avgFPS < this.config.minFPS || avgFrameTime > frameTimeTarget * 1.35) {
       if (this.currentLOD < LODLevel.LOD3) {
         newTargetLOD = this.currentLOD + 1;
-        console.warn(`Performance degraded (${avgFPS.toFixed(1)} FPS), reducing quality to LOD${newTargetLOD}`);
+        console.warn(
+          `Performance degraded (${avgFPS.toFixed(1)} FPS, ${avgFrameTime.toFixed(1)}ms frame time), reducing quality to LOD${newTargetLOD}`
+        );
       }
     }
     // Determine if we can increase quality (decrease LOD level)
-    else if (avgFPS > this.config.targetFPS * 1.2) { // 20% headroom
+    else if (avgFPS > this.config.targetFPS * 1.2 && avgFrameTime < frameTimeTarget * 0.8) {
       if (this.currentLOD > LODLevel.LOD0) {
         newTargetLOD = this.currentLOD - 1;
         console.info(`Performance improved (${avgFPS.toFixed(1)} FPS), increasing quality to LOD${newTargetLOD}`);
@@ -188,33 +190,47 @@ export class LODManager {
     }
 
     if (newTargetLOD !== this.currentLOD) {
-      this.setLOD(newTargetLOD);
+      const timeSinceChange = now - this.lastLODChange;
+      const delay = Math.max(1, this.config.hysteresis - timeSinceChange);
+      this.scheduleLODChange(newTargetLOD, delay);
+    } else if (this.pendingLODChange !== null) {
+      this.cancelPendingLODChange();
     }
   }
 
   private calculateAverageFPS(): number {
-    if (!this.performanceHistory.length) return 60;
+    if (!this.performanceHistory.length) {return 60;}
 
     const recentSamples = this.performanceHistory.slice(-5);
     return recentSamples.reduce((sum, metrics) => sum + metrics.fps, 0) / recentSamples.length;
   }
 
   private calculateAverageFrameTime(): number {
-    if (!this.performanceHistory.length) return 16.67;
+    if (!this.performanceHistory.length) {return 16.67;}
 
     const recentSamples = this.performanceHistory.slice(-5);
     return recentSamples.reduce((sum, metrics) => sum + metrics.frameTime, 0) / recentSamples.length;
   }
 
   private calculateAverageMemory(): number {
-    if (!this.performanceHistory.length) return 0;
+    if (!this.performanceHistory.length) {return 0;}
 
     const recentSamples = this.performanceHistory.slice(-3);
     return recentSamples.reduce((sum, metrics) => sum + (metrics.memoryUsage || 0), 0) / recentSamples.length;
   }
 
   setLOD(level: LODLevel): void {
-    if (level === this.currentLOD) return;
+    if (this.pendingLODTimeout) {
+      this.cancelPendingLODChange();
+    }
+
+    if (level === this.currentLOD) {
+      if (this.listeners.size > 1) {
+        const config = this.getCurrentConfig();
+        this.emitLODChange(level, config);
+      }
+      return;
+    }
 
     const oldLOD = this.currentLOD;
     this.currentLOD = level;
@@ -230,14 +246,7 @@ export class LODManager {
       animation: config.visualEffects.animation
     });
 
-    // Notify listeners
-    this.listeners.forEach(listener => {
-      try {
-        listener(level, config);
-      } catch (error) {
-        console.error('Error in LOD listener:', error);
-      }
-    });
+    this.emitLODChange(level, config);
   }
 
   addLODListener(listener: (newLOD: LODLevel, config: LODConfig) => void): () => void {
@@ -262,11 +271,16 @@ export class LODManager {
 
     // Device performance estimation
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-    const isLowEndGPU = renderer && (
+    const vendorString = typeof vendor === 'string' ? vendor : '';
+    const attributeLimit = typeof maxVertexAttributes === 'number' ? maxVertexAttributes : 16;
+    const isLowEndGPU = Boolean(renderer) && (
       renderer.includes('Intel') ||
       renderer.includes('630') ||
       renderer.includes('620') ||
-      maxTextureSize < 4096
+      vendorString.includes('Microsoft') ||
+      vendorString.includes('Qualcomm') ||
+      maxTextureSize < 4096 ||
+      attributeLimit < 16
     );
 
     const hardwareConcurrency = navigator.hardwareConcurrency || 4;
@@ -311,6 +325,43 @@ export class LODManager {
     const recommendedLOD = this.getRecommendedLODForDevice();
     this.setLOD(recommendedLOD);
   }
+
+  private scheduleLODChange(target: LODLevel, delay: number): void {
+    if (this.pendingLODChange === target && this.pendingLODTimeout) {
+      return;
+    }
+
+    this.cancelPendingLODChange();
+
+    this.pendingLODChange = target;
+    const safeDelay = Math.max(0, delay);
+    this.pendingLODTimeout = setTimeout(() => {
+      const pendingTarget = this.pendingLODChange;
+      this.pendingLODChange = null;
+      this.pendingLODTimeout = null;
+      if (pendingTarget !== null) {
+        this.setLOD(pendingTarget);
+      }
+    }, safeDelay);
+  }
+
+  private cancelPendingLODChange(): void {
+    if (this.pendingLODTimeout) {
+      clearTimeout(this.pendingLODTimeout);
+      this.pendingLODTimeout = null;
+    }
+    this.pendingLODChange = null;
+  }
+
+  private emitLODChange(level: LODLevel, config: LODConfig): void {
+    this.listeners.forEach(listener => {
+      try {
+        listener(level, config);
+      } catch (error) {
+        console.error('Error in LOD listener:', error);
+      }
+    });
+  }
 }
 
 // Singleton instance
@@ -324,8 +375,4 @@ export function getLODManager(): LODManager {
     globalLODManager.setLOD(recommendedLOD);
   }
   return globalLODManager;
-}
-
-export function resetLODManager(): void {
-  globalLODManager?.reset();
 }

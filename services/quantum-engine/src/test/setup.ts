@@ -13,7 +13,7 @@ beforeEach(() => {
 
 // Custom matchers for quantum calculations
 expect.extend({
-  toBeCloseToQuantum(received: number, expected: number, precision = 6): any {
+  toBeCloseToQuantum(received: number, expected: number, precision = 6): { pass: boolean; message: () => string } {
     const pass = Math.abs(received - expected) < Math.pow(10, -precision);
     return {
       message: () =>

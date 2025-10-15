@@ -104,11 +104,8 @@ Users can now trust that:
 To verify the mathematics yourself:
 
 ```bash
-cd services/quantum-engine
-npx tsx final-verification.ts
+npm run test --workspace @bio-sim/quantum-engine
 ```
-
-Expected output: `🎉 ALL TESTS PASSED!`
 
 ## Conclusion
 
@@ -116,4 +113,4 @@ The quantum mechanics engine is now **production-ready** with verified mathemati
 
 ---
 *Verified: 2025-09-30*
-*Tests: 27/27 passed (100%)*
+*Tests: see `npm run test --workspace @bio-sim/quantum-engine`*

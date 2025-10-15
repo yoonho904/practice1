@@ -166,10 +166,10 @@ describe('QuantumMechanicsEngine', () => {
         const [x, y, z] = particle.position;
         const r = Math.sqrt(x*x + y*y + z*z);
 
-        if (r < 1) shellCounts[0]++;
-        else if (r < 2) shellCounts[1]++;
-        else if (r < 3) shellCounts[2]++;
-        else shellCounts[3]++;
+        if (r < 1) {shellCounts[0]++;}
+        else if (r < 2) {shellCounts[1]++;}
+        else if (r < 3) {shellCounts[2]++;}
+        else {shellCounts[3]++;}
       });
 
       // For 1s orbital, most particles should be in inner shells

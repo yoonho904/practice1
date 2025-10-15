@@ -38,8 +38,6 @@
     "dist",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "src/test/setup.ts",
-    "test-interactive.ts",
-    "simple-test.js"
+    "src/test/setup.ts"
   ]
 }

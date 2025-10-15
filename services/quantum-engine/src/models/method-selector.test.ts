@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CalculationConfig } from '../types/quantum-types.js';
-import { MethodSelector, type QuantumMethod } from './method-selector.js';
+import { MethodSelector } from './method-selector.js';
 
 describe('MethodSelector', () => {
   let selector: MethodSelector;

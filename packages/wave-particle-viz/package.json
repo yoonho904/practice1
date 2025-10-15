@@ -17,7 +17,11 @@
   },
   "dependencies": {
     "three": "^0.158.0",
+<<<<<<< HEAD
     "@bio-sim/quantum-engine": "^0.1.0"
+=======
+    "@bio-sim/quantum-engine": "file:../../services/quantum-engine"
+>>>>>>> 356acc0 (feat: Implement theme context and provider for light/dark mode support)
   },
   "devDependencies": {
     "@types/three": "^0.158.3",

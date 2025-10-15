@@ -146,7 +146,7 @@ export function PeriodicTable({ elements, activeSymbol, onSelect }: PeriodicTabl
         <div className="category-legend__items">
           {uniqueCategories.map((category) => {
             const categoryInfo = CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS];
-            if (!categoryInfo) return null;
+            if (!categoryInfo) {return null;}
             return (
               <div key={category} className="category-legend__item">
                 <div

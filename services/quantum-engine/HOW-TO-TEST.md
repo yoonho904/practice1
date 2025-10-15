@@ -6,10 +6,7 @@
 # Navigate to the quantum engine directory
 cd services/quantum-engine
 
-# Run the interactive demo
-npx tsx test-interactive.ts
-
-# Or run all tests
+# Run all tests
 npm test
 ```
 
@@ -23,31 +20,19 @@ npm run test:watch         # Run in watch mode
 npm run test:ui            # Run with visual UI
 ```
 
-### 🎯 Specific Test Categories
+### 🎯 Targeted Suites
 ```bash
-# Core quantum mechanics (15 tests)
+# Core quantum mechanics
 npm test -- src/types/quantum-types.test.ts
 
-# Hydrogen calculations (13 tests)
+# Hydrogen calculations
 npm test -- src/models/hydrogen-like.test.ts
 
-# Method selection (16 tests)
+# Method selection
 npm test -- src/models/method-selector.test.ts
 
-# Integration workflows (10 tests)
+# Integration workflows
 npm test -- src/integration/quantum-workflow.test.ts
-
-# Full demo with output (1 test)
-npm test -- src/demo.test.ts
-```
-
-### 🚀 Interactive Testing
-```bash
-# Full interactive demo (TypeScript)
-npx tsx test-interactive.ts
-
-# Simple compiled test (JavaScript)
-npm run build && node simple-test.js
 ```
 
 ## What Each Test Shows
@@ -118,13 +103,6 @@ const method = selector.selectMethod({
   maxIterations: 100
 });
 console.log('Uranium method:', method.name); // relativistic-dft
-```
-
-### **Performance Benchmarking**
-```bash
-# The interactive test includes a performance benchmark:
-# Expected: ~300,000+ calculations/second
-npx tsx test-interactive.ts | grep "Rate:"
 ```
 
 ## Scientific Validation

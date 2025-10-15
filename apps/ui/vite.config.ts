@@ -36,6 +36,35 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("three")) {
+              return "vendor-three";
+            }
+            if (id.includes("react")) {
+              return "vendor-react";
+            }
+            if (id.includes("zustand")) {
+              return "vendor-zustand";
+            }
+            return "vendor";
+          }
+
+          if (id.includes("/services/quantum-engine/")) {
+            return "engine";
+          }
+
+          if (id.includes("/packages/")) {
+            return "domain-shared";
+          }
+
+          return undefined;
+        },
+      },
+    },
   },
   test: {
     environment: "jsdom",

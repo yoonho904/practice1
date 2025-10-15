@@ -275,7 +275,7 @@ export function getOrbitalBoundary(
         }
 
         step *= 0.9;
-        if (r <= 0 || r > maxRadius) break;
+        if (r <= 0 || r > maxRadius) {break;}
       }
 
       if (r > 0 && r < maxRadius) {

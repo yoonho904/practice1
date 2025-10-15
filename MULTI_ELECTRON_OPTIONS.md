@@ -234,7 +234,7 @@ Would require:
 ## Current Code Location
 
 - **Quantum Engine:** `/services/quantum-engine/src/models/hydrogen-like.ts`
-- **Verification:** `/services/quantum-engine/final-verification.ts`
+- **Verification:** `npm test --filter @bio-sim/quantum-engine`
 - **Math Report:** `/QUANTUM_MATH_VERIFICATION.md`
 
 All code is TDD with 27/27 tests passing for hydrogen-like systems.

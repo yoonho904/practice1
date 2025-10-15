@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import { beforeAll, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { setupTestEnvironment } from './TestingFramework';
@@ -7,8 +7,12 @@ import { setupTestEnvironment } from './TestingFramework';
 import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
 
 declare module 'vitest' {
-  interface Assertion<T = any> extends TestingLibraryMatchers<T, void> {}
-  interface AsymmetricMatchersContaining extends TestingLibraryMatchers {}
+  interface Assertion<T = unknown> extends TestingLibraryMatchers<T, void> {
+    readonly __testingLibraryBrand?: never;
+  }
+  interface AsymmetricMatchersContaining extends TestingLibraryMatchers<unknown, void> {
+    readonly __testingLibraryBrand?: never;
+  }
 }
 
 // Global setup

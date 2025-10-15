@@ -1,5 +1,5 @@
-import { FUNDAMENTAL_CONSTANTS, UnitConverter, validateQuantumNumbers } from '../constants/PhysicalConstants';
-import { QuantumNumbers, ElectronState } from './QuantumMechanicsEngine';
+import { FUNDAMENTAL_CONSTANTS, validateQuantumNumbers } from '../constants/PhysicalConstants';
+import type { QuantumNumbers } from './QuantumMechanicsEngine';
 
 export interface WaveFunction {
   getValue(x: number, y: number, z: number, time: number): number;
@@ -107,15 +107,15 @@ export class HydrogenWaveFunction implements WaveFunction {
   }
 
   private factorial(n: number): number {
-    if (n <= 1) return 1;
+    if (n <= 1) {return 1;}
     return n * this.factorial(n - 1);
   }
 
   private associatedLaguerre(n: number, alpha: number, x: number): number {
     // Simplified associated Laguerre polynomial calculation
-    if (n === 0) return 1;
-    if (n === 1) return 1 + alpha - x;
-    if (n === 2) return 2 + 3*alpha + alpha*alpha - 2*(2 + alpha)*x + x*x;
+    if (n === 0) {return 1;}
+    if (n === 1) {return 1 + alpha - x;}
+    if (n === 2) {return 2 + 3*alpha + alpha*alpha - 2*(2 + alpha)*x + x*x;}
 
     // For higher orders, use a simplified approximation
     return Math.pow(-1, n) * Math.pow(x, alpha) * Math.exp(x) / this.factorial(n);
@@ -127,8 +127,9 @@ export class HydrogenWaveFunction implements WaveFunction {
 
   private sphericalHarmonic(l: number, m: number, theta: number, phi: number): number {
     const cosTheta = Math.cos(theta);
-    const sinTheta = Math.sin(theta);
     const absM = Math.abs(m);
+    const sinTheta = Math.sin(theta);
+    const angularAmplitude = absM === 0 ? 1 : Math.pow(Math.abs(sinTheta), absM);
 
     // Calculate associated Legendre polynomial
     const legendreValue = this.associatedLegendre(l, absM, cosTheta);
@@ -144,9 +145,9 @@ export class HydrogenWaveFunction implements WaveFunction {
     if (m === 0) {
       azimuthal = 1;
     } else if (m > 0) {
-      azimuthal = Math.sqrt(2) * Math.cos(m * phi);
+      azimuthal = Math.sqrt(2) * Math.cos(m * phi) * angularAmplitude;
     } else {
-      azimuthal = Math.sqrt(2) * Math.sin(absM * phi);
+      azimuthal = Math.sqrt(2) * Math.sin(absM * phi) * angularAmplitude;
     }
 
     return norm * phase * legendreValue * azimuthal;
@@ -154,8 +155,8 @@ export class HydrogenWaveFunction implements WaveFunction {
 
   private associatedLegendre(l: number, m: number, x: number): number {
     // Calculate associated Legendre polynomial P_l^m(x)
-    if (m < 0 || m > l) return 0;
-    if (m === 0) return this.legendrePolynomial(l, x);
+    if (m < 0 || m > l) {return 0;}
+    if (m === 0) {return this.legendrePolynomial(l, x);}
 
     // Use recursion relation for associated Legendre polynomials
     const sinTheta = Math.sqrt(1 - x * x);
@@ -269,7 +270,7 @@ export class HydrogenWaveFunction implements WaveFunction {
           surface.push([x, y, z]);
         }
       }
-      if (surface.length > 0) surfaces.push(surface);
+      if (surface.length > 0) {surfaces.push(surface);}
     }
 
     // Angular nodes (nodal planes)
@@ -280,10 +281,10 @@ export class HydrogenWaveFunction implements WaveFunction {
         for (let v = -maxRadius; v <= maxRadius; v += step) {
           // Calculate point on nodal plane
           const point = this.getPointOnNodalPlane(plane, u, v);
-          if (point) surface.push(point);
+          if (point) {surface.push(point);}
         }
       }
-      if (surface.length > 0) surfaces.push(surface);
+      if (surface.length > 0) {surfaces.push(surface);}
     }
 
     return surfaces;
@@ -373,125 +374,6 @@ export class HydrogenWaveFunction implements WaveFunction {
   }
 }
 
-export class HydrogenlikeIonWaveFunction extends HydrogenWaveFunction {
-  constructor(
-    n: number,
-    l: number,
-    m: number,
-    Z: number,
-    private screeningConstant: number = 0
-  ) {
-    const effectiveZ = Math.max(1, Z - screeningConstant);
-    super(n, l, m, effectiveZ);
-  }
-}
-
-export class HybridOrbitalWaveFunction implements WaveFunction {
-  private hybridComponents: HydrogenWaveFunction[];
-  private coefficients: number[];
-
-  constructor(
-    hybridType: 'sp' | 'sp2' | 'sp3' | 'dsp3' | 'd2sp3',
-    Z: number = 1
-  ) {
-    this.hybridComponents = [];
-    this.coefficients = [];
-
-    switch (hybridType) {
-      case 'sp':
-        this.hybridComponents = [
-          new HydrogenWaveFunction(2, 0, 0, Z), // 2s
-          new HydrogenWaveFunction(2, 1, 0, Z)  // 2pz
-        ];
-        this.coefficients = [1/Math.sqrt(2), 1/Math.sqrt(2)];
-        break;
-
-      case 'sp2':
-        this.hybridComponents = [
-          new HydrogenWaveFunction(2, 0, 0, Z), // 2s
-          new HydrogenWaveFunction(2, 1, -1, Z), // 2px
-          new HydrogenWaveFunction(2, 1, 1, Z)   // 2py
-        ];
-        this.coefficients = [1/Math.sqrt(3), 1/Math.sqrt(3), 1/Math.sqrt(3)];
-        break;
-
-      case 'sp3':
-        this.hybridComponents = [
-          new HydrogenWaveFunction(2, 0, 0, Z), // 2s
-          new HydrogenWaveFunction(2, 1, -1, Z), // 2px
-          new HydrogenWaveFunction(2, 1, 0, Z),  // 2pz
-          new HydrogenWaveFunction(2, 1, 1, Z)   // 2py
-        ];
-        this.coefficients = [0.5, 0.5, 0.5, 0.5];
-        break;
-
-      case 'dsp3':
-        this.hybridComponents = [
-          new HydrogenWaveFunction(3, 2, 0, Z),  // 3dz²
-          new HydrogenWaveFunction(3, 0, 0, Z),  // 3s
-          new HydrogenWaveFunction(3, 1, -1, Z), // 3px
-          new HydrogenWaveFunction(3, 1, 0, Z),  // 3pz
-          new HydrogenWaveFunction(3, 1, 1, Z)   // 3py
-        ];
-        this.coefficients = [1/Math.sqrt(5), 1/Math.sqrt(5), 1/Math.sqrt(5), 1/Math.sqrt(5), 1/Math.sqrt(5)];
-        break;
-
-      case 'd2sp3':
-        this.hybridComponents = [
-          new HydrogenWaveFunction(3, 2, -2, Z), // 3dxy
-          new HydrogenWaveFunction(3, 2, 0, Z),  // 3dz²
-          new HydrogenWaveFunction(3, 0, 0, Z),  // 3s
-          new HydrogenWaveFunction(3, 1, -1, Z), // 3px
-          new HydrogenWaveFunction(3, 1, 0, Z),  // 3pz
-          new HydrogenWaveFunction(3, 1, 1, Z)   // 3py
-        ];
-        this.coefficients = Array(6).fill(1/Math.sqrt(6));
-        break;
-    }
-  }
-
-  getValue(x: number, y: number, z: number, time: number): number {
-    let result = 0;
-    for (let i = 0; i < this.hybridComponents.length; i++) {
-      result += this.coefficients[i] * this.hybridComponents[i].getValue(x, y, z, time);
-    }
-    return result;
-  }
-
-  getProbabilityDensity(x: number, y: number, z: number): number {
-    const value = this.getValue(x, y, z, 0);
-    return value * value;
-  }
-
-  getCharacteristicRadius(): number {
-    return this.hybridComponents[0].getCharacteristicRadius();
-  }
-
-  getOrbitalBoundary(isoValue: number): Array<[number, number, number]> {
-    const boundary: Array<[number, number, number]> = [];
-    const maxRadius = this.getCharacteristicRadius() * 5;
-    const step = maxRadius / 30;
-
-    for (let x = -maxRadius; x <= maxRadius; x += step) {
-      for (let y = -maxRadius; y <= maxRadius; y += step) {
-        for (let z = -maxRadius; z <= maxRadius; z += step) {
-          const density = this.getProbabilityDensity(x, y, z);
-          if (Math.abs(density - isoValue) < isoValue * 0.1) {
-            boundary.push([x, y, z]);
-          }
-        }
-      }
-    }
-
-    return boundary;
-  }
-
-  getNodalSurfaces(): Array<Array<[number, number, number]>> {
-    // Hybrid orbitals generally don't have simple nodal surfaces
-    return [];
-  }
-}
-
 export class WaveFunctionFactory {
   static create(n: number, l: number, m: number, Z: number = 1): WaveFunction {
     return new HydrogenWaveFunction(n, l, m, Z);
@@ -503,42 +385,6 @@ export class WaveFunctionFactory {
 
   static createFromQuantumNumbers(quantum: QuantumNumbers, Z: number = 1): WaveFunction {
     return new HydrogenWaveFunction(quantum.n, quantum.l, quantum.m, Z);
-  }
-
-  static createHydrogenlikeIon(
-    n: number,
-    l: number,
-    m: number,
-    Z: number,
-    screening: number = 0
-  ): WaveFunction {
-    return new HydrogenlikeIonWaveFunction(n, l, m, Z, screening);
-  }
-
-  static createHybridOrbital(
-    hybridType: 'sp' | 'sp2' | 'sp3' | 'dsp3' | 'd2sp3',
-    Z: number = 1
-  ): WaveFunction {
-    return new HybridOrbitalWaveFunction(hybridType, Z);
-  }
-
-  static createMultiElectronOrbital(
-    electrons: ElectronState[],
-    Z: number
-  ): WaveFunction {
-    // For multi-electron atoms, use Slater determinants
-    // This is a simplified implementation
-    if (electrons.length === 0) {
-      throw new Error('No electrons provided for multi-electron orbital');
-    }
-
-    const representative = electrons[0];
-    return new HydrogenWaveFunction(
-      representative.quantum.n,
-      representative.quantum.l,
-      representative.quantum.m,
-      Z
-    );
   }
 
   static getAllOrbitalTypes(maxN: number = 7): Array<{ n: number; l: number; label: string }> {
@@ -556,9 +402,5 @@ export class WaveFunctionFactory {
     }
 
     return orbitals;
-  }
-
-  static getHybridizationTypes(): string[] {
-    return ['sp', 'sp2', 'sp3', 'dsp3', 'd2sp3'];
   }
 }

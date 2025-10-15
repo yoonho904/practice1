@@ -1,4 +1,4 @@
-import { FUNDAMENTAL_CONSTANTS, ATOMIC_CONSTANTS, UnitConverter, validateQuantumNumbers } from '../constants/PhysicalConstants';
+import { FUNDAMENTAL_CONSTANTS, validateQuantumNumbers } from '../constants/PhysicalConstants';
 
 export interface QuantumNumbers {
   n: number;  // Principal quantum number
@@ -36,6 +36,11 @@ export interface ElementQuantumState {
 export class QuantumMechanicsEngine {
   private static instance: QuantumMechanicsEngine;
   private waveFunctionCache = new Map<string, Float32Array>();
+  private factorialCache = new Map<number, number>();
+  private radialPeakCache = new Map<string, number>();
+  private radialAmplitudePeakCache = new Map<string, number>();
+  private angularPeakCache = new Map<string, number>();
+  private probabilityPeakCache = new Map<string, number>();
 
   public static getInstance(): QuantumMechanicsEngine {
     if (!QuantumMechanicsEngine.instance) {
@@ -62,7 +67,8 @@ export class QuantumMechanicsEngine {
     }
 
     const r = Math.sqrt(x * x + y * y + z * z);
-    const theta = Math.acos(z / (r + 1e-10));
+    const safeRatio = r === 0 ? 1 : Math.min(1, Math.max(-1, z / r));
+    const theta = Math.acos(safeRatio);
     const phi = Math.atan2(y, x);
 
     const radialPart = this.calculateRadialWaveFunction(n, l, r, Z);
@@ -85,7 +91,14 @@ export class QuantumMechanicsEngine {
     Z: number = 1
   ): number {
     const waveValue = this.calculateWaveFunction(n, l, m, x, y, z, Z);
-    return waveValue * waveValue;
+    const probability = waveValue * waveValue;
+    const normalization = this.getProbabilityPeak(n, l, m, Z);
+
+    if (normalization <= 0) {
+      return probability;
+    }
+
+    return Math.min(probability / normalization, 1);
   }
 
   /**
@@ -105,7 +118,7 @@ export class QuantumMechanicsEngine {
     const orbitalOrder = this.getOrbitalFillingOrder();
 
     for (const { n, l } of orbitalOrder) {
-      if (remainingElectrons <= 0) break;
+      if (remainingElectrons <= 0) {break;}
 
       const maxElectronsInSubshell = 2 * (2 * l + 1);
       const electronsToPlace = Math.min(remainingElectrons, maxElectronsInSubshell);
@@ -146,12 +159,13 @@ export class QuantumMechanicsEngine {
     temperature: number = 298
   ): ElectronState[] {
     const particles: ElectronState[] = [];
-    const { n, l, electrons } = configuration;
+    const { n, l } = configuration;
 
     // Thermal energy effects
     const thermalVelocity = Math.sqrt(3 * FUNDAMENTAL_CONSTANTS.BOLTZMANN_CONSTANT * temperature / FUNDAMENTAL_CONSTANTS.ELECTRON_MASS);
 
     // Generate initial particle positions using proper quantum sampling
+    const minSeparation = l === 0 ? 0.05 : 0.3;
     for (let i = 0; i < sampleCount; i++) {
       let position: [number, number, number];
       let attempts = 0;
@@ -167,10 +181,10 @@ export class QuantumMechanicsEngine {
           const dy = position[1] - p.position[1];
           const dz = position[2] - p.position[2];
           const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-          return dist < 0.3; // Minimum separation of 0.3 Angstroms
+          return dist < minSeparation; // Minimum separation to avoid clustering
         });
 
-        if (!tooClose || attempts >= maxAttempts) break;
+        if (!tooClose || attempts >= maxAttempts) {break;}
       } while (true);
 
       // Calculate wave function phase
@@ -367,43 +381,174 @@ export class QuantumMechanicsEngine {
    * Calculate radial part of hydrogen-like wave function
    */
   private calculateRadialWaveFunction(n: number, l: number, r: number, Z: number): number {
-    const a0 = FUNDAMENTAL_CONSTANTS.BOHR_RADIUS * 1e10; // Convert to Angstroms
-    const rho = 2 * Z * r / (n * a0);
-
-    // Associated Laguerre polynomials for different n,l combinations
-    let radialPart = 0;
-
-    switch (n) {
-      case 1:
-        if (l === 0) {
-          radialPart = 2 * Math.pow(Z / a0, 1.5) * Math.exp(-rho / 2);
-        }
-        break;
-
-      case 2:
-        if (l === 0) {
-          radialPart = Math.pow(Z / (2 * a0), 1.5) * (2 - rho) * Math.exp(-rho / 2) / Math.sqrt(2);
-        } else if (l === 1) {
-          radialPart = Math.pow(Z / (2 * a0), 1.5) * rho * Math.exp(-rho / 2) / (2 * Math.sqrt(6));
-        }
-        break;
-
-      case 3:
-        if (l === 0) {
-          radialPart = Math.pow(Z / (3 * a0), 1.5) * (27 - 18 * rho + 2 * rho * rho) * Math.exp(-rho / 2) / (81 * Math.sqrt(3));
-        } else if (l === 1) {
-          radialPart = Math.pow(Z / (3 * a0), 1.5) * (6 - rho) * rho * Math.exp(-rho / 2) / (81 * Math.sqrt(6));
-        } else if (l === 2) {
-          radialPart = Math.pow(Z / (3 * a0), 1.5) * rho * rho * Math.exp(-rho / 2) / (81 * Math.sqrt(30));
-        }
-        break;
-
-      default:
-        // Simplified exponential for higher n
-        radialPart = Math.exp(-rho / 2) / Math.pow(n, 1.5);
+    if (n <= 0 || l < 0 || l >= n) {
+      return 0;
     }
 
-    return radialPart;
+    const k = n - l - 1;
+    if (k < 0) {
+      return 0;
+    }
+
+    const rho = (2 * Z * r) / n;
+    const prefactor = Math.sqrt(Math.pow(2 * Z / n, 3) * this.factorial(k) / (2 * n * this.factorial(n + l)));
+    const laguerre = this.associatedLaguerre(k, 2 * l + 1, rho);
+
+    return prefactor * Math.exp(-rho / 2) * Math.pow(rho, l) * laguerre;
+  }
+
+  private radialProbabilityDensity(n: number, l: number, Z: number, r: number): number {
+    if (r < 0) {
+      return 0;
+    }
+    const radial = this.calculateRadialWaveFunction(n, l, r, Z);
+    return radial * radial * r * r;
+  }
+
+  private getRadialPeak(n: number, l: number, Z: number, maxRadius: number): number {
+    const key = `${n}:${l}:${Z}:${maxRadius.toFixed(3)}`;
+    const cached = this.radialPeakCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    let peak = 0;
+    const steps = 512;
+    for (let i = 0; i <= steps; i++) {
+      const r = (maxRadius * i) / steps;
+      const density = this.radialProbabilityDensity(n, l, Z, r);
+      if (density > peak) {
+        peak = density;
+      }
+    }
+
+    const safePeak = peak > 0 ? peak * 1.05 : 1e-6;
+    this.radialPeakCache.set(key, safePeak);
+    return safePeak;
+  }
+
+  private sampleAngularDistribution(l: number, m: number): { theta: number; phi: number } {
+    if (l === 0) {
+      const cosTheta = 2 * Math.random() - 1;
+      return { theta: Math.acos(cosTheta), phi: 2 * Math.PI * Math.random() };
+    }
+
+    const peak = this.getAngularPeak(l, m);
+    for (let attempt = 0; attempt < 512; attempt++) {
+      const cosTheta = 2 * Math.random() - 1;
+      const theta = Math.acos(cosTheta);
+      const phi = 2 * Math.PI * Math.random();
+      const density = Math.pow(this.calculateSphericalHarmonic(l, m, theta, phi), 2);
+      if (density <= 0) {
+        continue;
+      }
+
+      if (Math.random() * peak <= density) {
+        return { theta, phi };
+      }
+    }
+
+    const cosTheta = 2 * Math.random() - 1;
+    return { theta: Math.acos(cosTheta), phi: 2 * Math.PI * Math.random() };
+  }
+
+  private getAngularPeak(l: number, m: number): number {
+    const key = `${l}:${m}`;
+    const cached = this.angularPeakCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    let peak = 0;
+    const thetaSteps = 120;
+    const phiSteps = 240;
+    for (let i = 0; i <= thetaSteps; i++) {
+      const theta = Math.PI * i / thetaSteps;
+      for (let j = 0; j < phiSteps; j++) {
+        const phi = (2 * Math.PI * j) / phiSteps;
+        const density = Math.pow(this.calculateSphericalHarmonic(l, m, theta, phi), 2);
+        if (density > peak) {
+          peak = density;
+        }
+      }
+    }
+
+    const safePeak = peak > 0 ? peak * 1.05 : 1e-6;
+    this.angularPeakCache.set(key, safePeak);
+    return safePeak;
+  }
+
+  private getRadialAmplitudePeak(n: number, l: number, Z: number): number {
+    const key = `${n}:${l}:${Z}`;
+    const cached = this.radialAmplitudePeakCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const maxRadius = Math.max(10, (n * n * 6) / Math.max(Z, 1));
+    let peak = 0;
+    const steps = 512;
+    for (let i = 0; i <= steps; i++) {
+      const r = (maxRadius * i) / steps;
+      const amplitude = this.calculateRadialWaveFunction(n, l, r, Z);
+      const value = amplitude * amplitude;
+      if (value > peak) {
+        peak = value;
+      }
+    }
+
+    const safePeak = peak > 0 ? peak * 1.05 : 1e-6;
+    this.radialAmplitudePeakCache.set(key, safePeak);
+    return safePeak;
+  }
+
+  private getProbabilityPeak(n: number, l: number, m: number, Z: number): number {
+    const key = `${n}:${l}:${m}:${Z}`;
+    const cached = this.probabilityPeakCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const peak = this.getRadialAmplitudePeak(n, l, Z) * this.getAngularPeak(l, m);
+    const safePeak = peak > 0 ? peak : 1e-6;
+    this.probabilityPeakCache.set(key, safePeak);
+    return safePeak;
+  }
+
+  private factorial(n: number): number {
+    if (n <= 1) {
+      return 1;
+    }
+    const cached = this.factorialCache.get(n);
+    if (cached !== undefined) {
+      return cached;
+    }
+    let result = 1;
+    for (let i = 2; i <= n; i++) {
+      result *= i;
+    }
+    this.factorialCache.set(n, result);
+    return result;
+  }
+
+  private associatedLaguerre(k: number, alpha: number, x: number): number {
+    if (k === 0) {
+      return 1;
+    }
+    if (k === 1) {
+      return 1 + alpha - x;
+    }
+
+    let LkMinusTwo = 1;
+    let LkMinusOne = 1 + alpha - x;
+
+    for (let i = 2; i <= k; i++) {
+      const coefficient = ((2 * i - 1 + alpha - x) * LkMinusOne - (i - 1 + alpha) * LkMinusTwo) / i;
+      LkMinusTwo = LkMinusOne;
+      LkMinusOne = coefficient;
+    }
+
+    return LkMinusOne;
   }
 
   /**
@@ -465,12 +610,17 @@ export class QuantumMechanicsEngine {
 
   /**
    * Apply electron-electron repulsion to prevent bunching
-   */
+  */
   private applyElectronRepulsion(particles: ElectronState[], n: number, l: number, Z: number): ElectronState[] {
+    if (l === 0) {
+      return particles.map(p => ({ ...p }));
+    }
+
     const relaxedParticles = particles.map(p => ({ ...p })); // Deep copy
     const iterations = 20;
     const repulsionStrength = 0.05;
     const dampening = 0.7;
+    const lowProbabilityThreshold = 0.01;
 
     for (let iter = 0; iter < iterations; iter++) {
       // Calculate forces between all particles
@@ -516,7 +666,7 @@ export class QuantumMechanicsEngine {
         const currentProb = this.calculateProbabilityDensity(n, l, 0,
           particle.position[0], particle.position[1], particle.position[2], Z);
 
-        if (currentProb < 0.01) { // If moved to low probability region
+        if (currentProb < lowProbabilityThreshold) { // If moved to low probability region
           // Sample a new position closer to original quantum distribution
           const quantumPosition = this.sampleFromProbabilityDistribution(n, l, 0, Z);
           const pullStrength = 0.1;
@@ -539,68 +689,54 @@ export class QuantumMechanicsEngine {
    * Sample position from probability distribution using proper spherical sampling
    */
   private sampleFromProbabilityDistribution(n: number, l: number, m: number, Z: number): [number, number, number] {
-    const bohrRadius = FUNDAMENTAL_CONSTANTS.BOHR_RADIUS * 1e10; // Convert to Angstroms
-    const a0 = bohrRadius;
-
-    // Use proper orbital-dependent radial sampling
-    let r: number;
+    const maxRadius = Math.max(10, (n * n * 6) / Math.max(Z, 1));
+    let radius: number;
 
     if (n === 1 && l === 0) {
-      // 1s orbital - exponential distribution
-      r = -a0 * Math.log(1 - Math.random()) * n * n / Z;
-    } else if (n === 2 && l === 0) {
-      // 2s orbital - more complex with radial node
-      const u = Math.random();
-      r = a0 * n * n / Z * (1.5 + Math.sqrt(u) * 2);
-    } else if (l === 1) {
-      // p orbitals - peak away from origin
-      const u = Math.random();
-      r = a0 * n * n / Z * Math.pow(u, 0.3) * (1.5 + Math.random());
+      const product =
+        Math.max(Math.random(), Number.EPSILON) *
+        Math.max(Math.random(), Number.EPSILON) *
+        Math.max(Math.random(), Number.EPSILON);
+      radius = -0.5 * Math.log(product);
+      radius /= Math.max(Z, 1e-6);
     } else {
-      // General case
-      const u = Math.random();
-      r = a0 * n * n / Z * Math.pow(u, 1.0 / (n + l));
-    }
+      const peakProbability = this.getRadialPeak(n, l, Z, maxRadius);
+      let selected: number | null = null;
+      let bestCandidate = 0;
+      let bestProbability = -Infinity;
 
-    // Limit maximum radius
-    const maxR = n * n * a0 / Z * 6;
-    r = Math.min(r, maxR);
+      for (let attempt = 0; attempt < 512; attempt++) {
+        const candidate = Math.random() * maxRadius;
+        const probability = this.radialProbabilityDensity(n, l, Z, candidate);
 
-    // Generate angular coordinates based on orbital type
-    let theta: number, phi: number;
+        if (probability > bestProbability) {
+          bestProbability = probability;
+          bestCandidate = candidate;
+        }
 
-    if (l === 0) {
-      // s orbitals - spherically symmetric
-      theta = Math.acos(2 * Math.random() - 1);
-      phi = 2 * Math.PI * Math.random();
-    } else if (l === 1) {
-      // p orbitals - directional preference
-      const cosTheta = 2 * Math.random() - 1;
-      theta = Math.acos(cosTheta);
-      phi = 2 * Math.PI * Math.random();
+        if (probability <= 0) {
+          continue;
+        }
 
-      // Add slight directional bias for p orbitals
-      const direction = Math.random();
-      if (direction < 0.33) {
-        // px preference
-        phi = Math.random() < 0.6 ? 0 : phi;
-      } else if (direction < 0.66) {
-        // py preference
-        phi = Math.random() < 0.6 ? Math.PI/2 : phi;
+        if (Math.random() * peakProbability <= probability) {
+          selected = candidate;
+          break;
+        }
       }
-      // pz naturally favored by cosTheta distribution
-    } else {
-      // d orbitals and higher
-      theta = Math.acos(2 * Math.random() - 1);
-      phi = 2 * Math.PI * Math.random();
+
+      radius = selected ?? bestCandidate;
     }
 
-    // Convert to Cartesian coordinates
-    const x = r * Math.sin(theta) * Math.cos(phi);
-    const y = r * Math.sin(theta) * Math.sin(phi);
-    const z = r * Math.cos(theta);
+    radius = Math.min(radius, maxRadius);
 
-    return [x, y, z];
+    const { theta, phi } = this.sampleAngularDistribution(l, m);
+    const sinTheta = Math.sin(theta);
+
+    return [
+      radius * sinTheta * Math.cos(phi),
+      radius * sinTheta * Math.sin(phi),
+      radius * Math.cos(theta),
+    ];
   }
 
   /**
@@ -608,7 +744,6 @@ export class QuantumMechanicsEngine {
    */
   private fillOrbitalSubshell(n: number, l: number, electronCount: number, Z: number): ElectronState[] {
     const electrons: ElectronState[] = [];
-    const orbitals = 2 * l + 1; // Number of magnetic quantum states
 
     // First pass: fill each orbital with one electron (parallel spins)
     for (let m = -l; m <= l && electrons.length < electronCount; m++) {

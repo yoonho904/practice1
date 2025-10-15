@@ -201,17 +201,6 @@ describe('WaveFunctionFactory', () => {
     // 2p orbital should have nodal planes
   });
 
-  it('should create hybrid orbitals', () => {
-    const sp3Hybrid = WaveFunctionFactory.createHybridOrbital('sp3', 6);
-
-    expect(sp3Hybrid).toBeDefined();
-    expect(typeof sp3Hybrid.getValue).toBe('function');
-
-    const value = sp3Hybrid.getValue(1, 1, 1, 0);
-    expect(typeof value).toBe('number');
-    expect(value).not.toBeNaN();
-  });
-
   it('should list all orbital types', () => {
     const orbitals = WaveFunctionFactory.getAllOrbitalTypes(3);
 
@@ -223,14 +212,5 @@ describe('WaveFunctionFactory', () => {
     expect(labels).toContain('1s');
     expect(labels).toContain('2s');
     expect(labels).toContain('2p');
-  });
-
-  it('should list hybridization types', () => {
-    const types = WaveFunctionFactory.getHybridizationTypes();
-
-    expect(Array.isArray(types)).toBe(true);
-    expect(types).toContain('sp');
-    expect(types).toContain('sp2');
-    expect(types).toContain('sp3');
   });
 });

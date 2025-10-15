@@ -8,7 +8,7 @@ import type {
   QuantumCalculationResult,
   CalculationMetadata,
 } from '../types/quantum-types.js';
-import { validateQuantumNumbers, PHYSICAL_CONSTANTS } from '../types/quantum-types.js';
+import { validateQuantumNumbers } from '../types/quantum-types.js';
 
 /**
  * Hydrogen-like atom solver using exact analytical solutions
@@ -165,9 +165,9 @@ export class HydrogenLikeAtom {
    * Simplified implementation for small n
    */
   private associatedLaguerre(n: number, alpha: number, x: number): number {
-    if (n === 0) return 1;
-    if (n === 1) return 1 + alpha - x;
-    if (n === 2) return ((2 + alpha - x) * (1 + alpha - x) - x) / 2;
+    if (n === 0) {return 1;}
+    if (n === 1) {return 1 + alpha - x;}
+    if (n === 2) {return ((2 + alpha - x) * (1 + alpha - x) - x) / 2;}
 
     // For higher orders, use recurrence relation
     // This is a simplified implementation - full version would be more extensive
@@ -189,8 +189,8 @@ export class HydrogenLikeAtom {
    */
   private associatedLegendre(l: number, m: number, x: number): number {
     // Handle base cases
-    if (m < 0 || m > l) return 0;
-    if (l === 0 && m === 0) return 1;
+    if (m < 0 || m > l) {return 0;}
+    if (l === 0 && m === 0) {return 1;}
 
     // Compute P_m^m(x) using the base formula
     // P_m^m(x) = (-1)^m * (2m-1)!! * (1-x²)^(m/2)
@@ -206,13 +206,13 @@ export class HydrogenLikeAtom {
       }
     }
 
-    if (l === m) return pmm;
+    if (l === m) {return pmm;}
 
     // Compute P_{m+1}^m(x) using recurrence
     // P_{m+1}^m(x) = x * (2m+1) * P_m^m(x)
     let pmmp1 = x * (2 * m + 1) * pmm;
 
-    if (l === m + 1) return pmmp1;
+    if (l === m + 1) {return pmmp1;}
 
     // Compute P_l^m(x) using recurrence relation
     // (l-m) * P_l^m(x) = x * (2l-1) * P_{l-1}^m(x) - (l+m-1) * P_{l-2}^m(x)
@@ -230,8 +230,8 @@ export class HydrogenLikeAtom {
    * Factorial function for normalization constants
    */
   private factorial(n: number): number {
-    if (n < 0) throw new Error('Factorial of negative number');
-    if (n === 0 || n === 1) return 1;
+    if (n < 0) {throw new Error('Factorial of negative number');}
+    if (n === 0 || n === 1) {return 1;}
 
     let result = 1;
     for (let i = 2; i <= n; i++) {

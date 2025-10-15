@@ -1,13 +1,15 @@
 import React from 'react';
-import type { QuantumVisualizationConfig } from './AtomVisualizer';
-import { type OrbitalConfiguration } from '../physics/QuantumMechanicsEngine';
 import type { ElementRecord } from '@bio-sim/atomic-data';
+
+interface QuantumVisualizationConfig {
+  selectedOrbital?: string;
+  particleCount: number;
+  temperature: number;
+}
 
 interface QuantumVisualizationProps {
   config: QuantumVisualizationConfig;
   element?: ElementRecord;
-  elementConfigs: OrbitalConfiguration[];
-  onConfigurationChange: (config: QuantumVisualizationConfig) => void;
 }
 
 /**
@@ -21,9 +23,7 @@ interface QuantumVisualizationProps {
  */
 const QuantumAtomVisualizer: React.FC<QuantumVisualizationProps> = ({
   config,
-  element,
-  elementConfigs,
-  onConfigurationChange
+  element
 }) => {
   return (
     <div style={{

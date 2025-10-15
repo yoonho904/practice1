@@ -1,4 +1,4 @@
-import { FUNDAMENTAL_CONSTANTS, ERROR_TOLERANCES, calculateOrbitalEnergy, validateQuantumNumbers, validateElectronConfiguration, UnitConverter } from '../constants/PhysicalConstants';
+import { FUNDAMENTAL_CONSTANTS, ERROR_TOLERANCES, calculateOrbitalEnergy, validateQuantumNumbers, validateElectronConfiguration } from '../constants/PhysicalConstants';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -43,7 +43,7 @@ export class ScientificValidator {
   validateOrbital(orbital: OrbitalValidationData): ValidationResult {
     const cacheKey = `orbital_${orbital.n}_${orbital.l}_${orbital.m}_${orbital.electronCount}`;
     const cached = this.validationCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {return cached;}
 
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -162,7 +162,12 @@ export class ScientificValidator {
     const neutronCount = atom.massNumber - atom.atomicNumber;
     const neutronProtonRatio = neutronCount / atom.atomicNumber;
 
-    if (atom.atomicNumber <= 20 && (neutronProtonRatio < 0.8 || neutronProtonRatio > 1.4)) {
+    if (atom.atomicNumber === 1) {
+      if (atom.massNumber > 3) {
+        warnings.push(`Unusual neutron/proton ratio: ${neutronProtonRatio.toFixed(2)} (may be unstable for hydrogen)`);
+        confidence *= 0.9;
+      }
+    } else if (atom.atomicNumber <= 20 && (neutronProtonRatio < 0.8 || neutronProtonRatio > 1.4)) {
       warnings.push(`Unusual neutron/proton ratio: ${neutronProtonRatio.toFixed(2)} (may be unstable)`);
       confidence *= 0.9;
     }
@@ -199,10 +204,12 @@ export class ScientificValidator {
     }
 
     // Energy ordering: higher n should have higher (less negative) energy
-    const lowerShellEnergy = calculateOrbitalEnergy(n - 1, atomicNumber);
-    if (n > 1 && calculatedEnergy < lowerShellEnergy) {
-      warnings.push(`Energy ordering violation: n=${n} has lower energy than n=${n-1}`);
-      confidence *= 0.8;
+    if (n > 1) {
+      const lowerShellEnergy = calculateOrbitalEnergy(n - 1, atomicNumber);
+      if (calculatedEnergy < lowerShellEnergy) {
+        warnings.push(`Energy ordering violation: n=${n} has lower energy than n=${n - 1}`);
+        confidence *= 0.8;
+      }
     }
 
     return {
@@ -217,9 +224,9 @@ export class ScientificValidator {
    * Calculate expected orbital radius using Bohr model
    */
   private calculateExpectedOrbitalRadius(n: number, l: number): number {
-    // Simplified: a₀ * n² / Z (for hydrogen-like atoms)
-    // This is a rough approximation; real orbitals have complex shapes
-    return FUNDAMENTAL_CONSTANTS.BOHR_RADIUS * n * n;
+    // Approximate: include angular momentum contribution to the most probable radius
+    const angularFactor = 1 + l * 0.2;
+    return FUNDAMENTAL_CONSTANTS.BOHR_RADIUS * n * n * angularFactor;
   }
 
   /**
@@ -249,13 +256,17 @@ export class ScientificValidator {
     }
 
     // Check for numerical precision issues
-    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
-    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
-    const coefficientOfVariation = Math.sqrt(variance) / Math.abs(mean);
+    const finiteValues = values.filter(v => Number.isFinite(v));
+    if (finiteValues.length > 0) {
+      const mean = finiteValues.reduce((sum, v) => sum + v, 0) / finiteValues.length;
+      const variance = finiteValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / finiteValues.length;
+      const denominator = Math.abs(mean) > 1e-9 ? Math.abs(mean) : 1e-9;
+      const coefficientOfVariation = Math.sqrt(variance) / denominator;
 
-    if (coefficientOfVariation > 100) { // Very high variability might indicate numerical issues
-      warnings.push(`High variability in ${label}: CV=${coefficientOfVariation.toFixed(2)}`);
-      confidence *= 0.95;
+      if (coefficientOfVariation > 0.75) { // High variability might indicate numerical issues
+        warnings.push(`High variability in ${label}: CV=${coefficientOfVariation.toFixed(2)}`);
+        confidence *= 0.95;
+      }
     }
 
     return {

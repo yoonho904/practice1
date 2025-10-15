@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { HydrogenLikeAtom, MethodSelector, type QuantumNumbers, type CalculationConfig } from '@bio-sim/quantum-engine';
+import { HydrogenLikeAtom, type QuantumNumbers } from '@bio-sim/quantum-engine';
 import { WaveParticleSystem, type WaveParticleConfig } from './systems/WaveParticleSystem.js';
 import { DropletRenderer, type DropletRenderConfig } from './renderers/DropletRenderer.js';
 
@@ -205,7 +205,7 @@ export class WaveParticleVisualizer {
    * Handle mouse movement for interactive slicing
    */
   private onMouseMove(event: MouseEvent): void {
-    if (!this.controls.enableSlicing) return;
+    if (!this.controls.enableSlicing) {return;}
 
     const canvas = this.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
@@ -223,7 +223,7 @@ export class WaveParticleVisualizer {
    * Start animation loop
    */
   public start(): void {
-    if (this.animationId !== null) return;
+    if (this.animationId !== null) {return;}
 
     this.startTime = Date.now();
     this.animate();

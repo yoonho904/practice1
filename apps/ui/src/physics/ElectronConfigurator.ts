@@ -1,5 +1,4 @@
-import { QuantumNumbers, ElectronState, OrbitalConfiguration, ElementQuantumState } from './QuantumMechanicsEngine';
-import { ATOMIC_CONSTANTS } from '../constants/PhysicalConstants';
+import type { ElectronState, OrbitalConfiguration, ElementQuantumState } from './QuantumMechanicsEngine';
 
 export interface ElementProperties {
   atomicNumber: number;
@@ -80,7 +79,7 @@ export class ElectronConfigurator {
       return `[${coreSymbol}]`;
     }
 
-    const valenceConfig = this.generateValenceConfiguration(remainingElectrons, coreGas);
+    const valenceConfig = this.generateValenceConfiguration(remainingElectrons);
     return `[${coreSymbol}] ${valenceConfig}`;
   }
 
@@ -218,7 +217,7 @@ export class ElectronConfigurator {
     ];
 
     for (const { n, l } of orbitalOrder) {
-      if (remainingElectrons <= 0) break;
+      if (remainingElectrons <= 0) {break;}
 
       const maxElectrons = 2 * (2 * l + 1);
       const electronsInOrbital = Math.min(remainingElectrons, maxElectrons);
@@ -280,7 +279,7 @@ export class ElectronConfigurator {
     return this.generateConfigurationString(config.configurations);
   }
 
-  private static generateValenceConfiguration(electrons: number, startingOrbital: number): string {
+  private static generateValenceConfiguration(electrons: number): string {
     // Simplified valence configuration generation
     const config = this.generateGroundState(electrons);
     return this.generateConfigurationString(config.configurations);
@@ -366,12 +365,12 @@ export class ElectronConfigurator {
   }
 
   private static calculatePeriod(atomicNumber: number): number {
-    if (atomicNumber <= 2) return 1;
-    if (atomicNumber <= 10) return 2;
-    if (atomicNumber <= 18) return 3;
-    if (atomicNumber <= 36) return 4;
-    if (atomicNumber <= 54) return 5;
-    if (atomicNumber <= 86) return 6;
+    if (atomicNumber <= 2) {return 1;}
+    if (atomicNumber <= 10) {return 2;}
+    if (atomicNumber <= 18) {return 3;}
+    if (atomicNumber <= 36) {return 4;}
+    if (atomicNumber <= 54) {return 5;}
+    if (atomicNumber <= 86) {return 6;}
     return 7;
   }
 
@@ -380,8 +379,8 @@ export class ElectronConfigurator {
     const config = this.generateGroundState(atomicNumber);
     const valenceElectrons = this.countValenceElectrons(config);
 
-    if (valenceElectrons <= 2) return valenceElectrons;
-    if (valenceElectrons <= 8) return valenceElectrons + 10;
+    if (valenceElectrons <= 2) {return valenceElectrons;}
+    if (valenceElectrons <= 8) {return valenceElectrons + 10;}
     return 18;
   }
 
@@ -389,10 +388,10 @@ export class ElectronConfigurator {
     const config = this.generateGroundState(atomicNumber);
     const lastOrbital = config.configurations[config.configurations.length - 1];
 
-    if (lastOrbital.l === 0) return 's';
-    if (lastOrbital.l === 1) return 'p';
-    if (lastOrbital.l === 2) return 'd';
-    if (lastOrbital.l === 3) return 'f';
+    if (lastOrbital.l === 0) {return 's';}
+    if (lastOrbital.l === 1) {return 'p';}
+    if (lastOrbital.l === 2) {return 'd';}
+    if (lastOrbital.l === 3) {return 'f';}
     return 'g';
   }
 

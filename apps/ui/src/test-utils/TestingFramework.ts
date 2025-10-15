@@ -1,14 +1,50 @@
 import { vi } from 'vitest';
 
+interface MockWorkerMessage<T = unknown> {
+  type: string;
+  payload: T;
+}
+
+interface MockWorkerEvent<T = unknown> {
+  data: MockWorkerMessage<T>;
+}
+
+type MockWorkerListener = (event: MockWorkerEvent<unknown>) => void;
+
+type FrameCallback = FrameRequestCallback;
+
+type IdleCallback = IdleRequestCallback;
+
+type IdleOptions = IdleRequestOptions | undefined;
+
+interface PerformanceWithMemory extends Performance {
+  memory?: {
+    usedJSHeapSize: number;
+  };
+}
+
+type GlobalWithGC = typeof globalThis & {
+  gc?: () => void;
+};
+
 // Mock WebGL context for testing
 export function createMockWebGLContext(): Partial<WebGLRenderingContext> {
+  const webglStatics = globalThis.WebGLRenderingContext as unknown as typeof WebGLRenderingContext;
+
   return {
+    VERSION: webglStatics.VERSION,
+    RENDERER: webglStatics.RENDERER,
+    VENDOR: webglStatics.VENDOR,
+    MAX_TEXTURE_SIZE: webglStatics.MAX_TEXTURE_SIZE,
+    MAX_VERTEX_ATTRIBS: webglStatics.MAX_VERTEX_ATTRIBS,
     getParameter: vi.fn((param) => {
       switch (param) {
         case WebGLRenderingContext.RENDERER:
           return 'Mock WebGL Renderer';
         case WebGLRenderingContext.VENDOR:
           return 'Mock Vendor';
+        case WebGLRenderingContext.VERSION:
+          return 'WebGL 1.0 Mock';
         case WebGLRenderingContext.MAX_TEXTURE_SIZE:
           return 4096;
         case WebGLRenderingContext.MAX_VERTEX_ATTRIBS:
@@ -38,7 +74,7 @@ export function createMockWebGLContext(): Partial<WebGLRenderingContext> {
 
 // Mock HTMLCanvasElement for testing
 export function createMockCanvas(): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
   canvas.width = 800;
   canvas.height = 600;
 
@@ -56,25 +92,25 @@ export function createMockCanvas(): HTMLCanvasElement {
 
 // Mock Worker for testing
 export class MockWorker {
-  private listeners: Map<string, Function[]> = new Map();
+  private listeners: Map<string, MockWorkerListener[]> = new Map();
 
   constructor(private url: string | URL) {}
 
-  postMessage(data: any): void {
+  postMessage(data: unknown): void {
     // Simulate async worker response
     setTimeout(() => {
-      this.dispatchEvent('message', { data: { type: 'test_response', data } });
+      this.dispatchEvent('message', { data: { type: 'test_response', payload: data } });
     }, 10);
   }
 
-  addEventListener(type: string, listener: Function): void {
+  addEventListener(type: string, listener: MockWorkerListener): void {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, []);
     }
     this.listeners.get(type)!.push(listener);
   }
 
-  removeEventListener(type: string, listener: Function): void {
+  removeEventListener(type: string, listener: MockWorkerListener): void {
     const listeners = this.listeners.get(type);
     if (listeners) {
       const index = listeners.indexOf(listener);
@@ -84,7 +120,7 @@ export class MockWorker {
     }
   }
 
-  private dispatchEvent(type: string, event: any): void {
+  private dispatchEvent(type: string, event: MockWorkerEvent<unknown>): void {
     const listeners = this.listeners.get(type);
     if (listeners) {
       listeners.forEach(listener => listener(event));
@@ -98,9 +134,9 @@ export class MockWorker {
 
 // Mock requestAnimationFrame for testing
 let rafId = 0;
-const rafCallbacks = new Map<number, Function>();
+const rafCallbacks = new Map<number, FrameCallback>();
 
-export const mockRequestAnimationFrame = vi.fn((callback: Function) => {
+export const mockRequestAnimationFrame = vi.fn((callback: FrameCallback) => {
   const id = ++rafId;
   rafCallbacks.set(id, callback);
   // Execute immediately in tests
@@ -113,10 +149,10 @@ export const mockCancelAnimationFrame = vi.fn((id: number) => {
 });
 
 // Mock requestIdleCallback for testing
-export const mockRequestIdleCallback = vi.fn((callback: Function, options?: any) => {
-  const deadline = {
-    timeRemaining: () => 50, // Mock 50ms remaining
-    didTimeout: false
+export const mockRequestIdleCallback = vi.fn((callback: IdleCallback, _options?: IdleOptions) => {
+  const deadline: IdleDeadline = {
+    didTimeout: false,
+    timeRemaining: () => 50 // Mock 50ms remaining
   };
   setTimeout(() => callback(deadline), 0);
   return 1;
@@ -131,13 +167,26 @@ export const mockPerformanceNow = vi.fn(() => {
 // Test environment setup
 export function setupTestEnvironment() {
   // Mock global objects
-  global.Worker = MockWorker as any;
-  global.requestAnimationFrame = mockRequestAnimationFrame;
-  global.cancelAnimationFrame = mockCancelAnimationFrame;
-  global.requestIdleCallback = mockRequestIdleCallback;
+  if (typeof globalThis.WebGLRenderingContext === 'undefined') {
+    class MockWebGLRenderingContext {
+      static readonly RENDERER = 0x1f01;
+      static readonly VENDOR = 0x1f00;
+      static readonly MAX_TEXTURE_SIZE = 0x0d33;
+      static readonly MAX_VERTEX_ATTRIBS = 0x8869;
+      static readonly VERSION = 0x1f02;
+    }
+
+    (globalThis as Record<string, unknown>).WebGLRenderingContext = MockWebGLRenderingContext;
+    (globalThis as Record<string, unknown>).WebGL2RenderingContext = MockWebGLRenderingContext;
+  }
+
+  (globalThis as GlobalWithGC).Worker = MockWorker as unknown as typeof Worker;
+  globalThis.requestAnimationFrame = mockRequestAnimationFrame as unknown as typeof requestAnimationFrame;
+  globalThis.cancelAnimationFrame = mockCancelAnimationFrame as unknown as typeof cancelAnimationFrame;
+  (globalThis as GlobalWithGC).requestIdleCallback = mockRequestIdleCallback as unknown as typeof requestIdleCallback;
 
   // Mock performance
-  Object.defineProperty(global.performance, 'now', {
+  Object.defineProperty(globalThis.performance, 'now', {
     value: mockPerformanceNow,
     writable: true
   });
@@ -258,21 +307,24 @@ export class MemoryTester {
   private initialMemory: number = 0;
 
   startMemoryTest(): void {
-    if ('memory' in performance && (performance as any).memory) {
-      this.initialMemory = (performance as any).memory.usedJSHeapSize;
+    const perf = performance as PerformanceWithMemory;
+    if (perf.memory) {
+      this.initialMemory = perf.memory.usedJSHeapSize;
     }
   }
 
   getMemoryDelta(): number {
-    if ('memory' in performance && (performance as any).memory) {
-      return (performance as any).memory.usedJSHeapSize - this.initialMemory;
+    const perf = performance as PerformanceWithMemory;
+    if (perf.memory) {
+      return perf.memory.usedJSHeapSize - this.initialMemory;
     }
     return 0;
   }
 
   static async forceGarbageCollection(): Promise<void> {
-    if ('gc' in global && typeof (global as any).gc === 'function') {
-      (global as any).gc();
+    const globalScope = globalThis as GlobalWithGC;
+    if (typeof globalScope.gc === 'function') {
+      globalScope.gc();
     }
     // Give some time for GC to complete
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -312,6 +364,16 @@ export const scientificAssertions = {
 };
 
 // Test data generators
+export interface PerformanceSample {
+  fps: number;
+  frameTime: number;
+  drawCalls: number;
+  triangles: number;
+  points: number;
+  memoryUsage: number;
+  gpuMemory: number;
+}
+
 export const testDataGenerators = {
   generateOrbitalSamples(count: number = 100): Array<{
     position: [number, number, number];
@@ -333,7 +395,7 @@ export const testDataGenerators = {
     return samples;
   },
 
-  generatePerformanceMetrics(): any {
+  generatePerformanceMetrics(): PerformanceSample {
     return {
       fps: 45 + Math.random() * 30,
       frameTime: 10 + Math.random() * 20,

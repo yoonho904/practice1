@@ -13,6 +13,14 @@ This repository contains the first implementation slice for the interactive atom
 - `services/engines/*` – Chemistry/Physics/Biology engine stubs that react to selection/environment changes and publish structured status updates.
 - `services/simulation-director` – Orchestrator coordinating commands, data hydration, engine lifecycles, and websocket fan-out.
 
+## Recent Additions
+
+- **Molecular Bonding Visualizer**: The UI now includes a dedicated H–H molecular orbital mode with amplitude-normalised σ / σ\* sampling, phase-aware particle shading, and optional marching‑cubes density isosurfaces.
+- **Orbital Caching Pipeline**: Hydrogen-like sampling shares a molecular cache with neighbor preloading to keep bond-length adjustments responsive.
+- **Physics Toolkit**: New molecular orbital utilities (`molecularOrbitals.ts`, `molecularBondingSampler.ts`, cache helpers) encapsulate the Heitler–London math used by both UI and worker threads.
+- **UI Controls**: σ/σ\* toggle, bond-length slider, and density-surface switch are now wired into the React control surface (desktop and mobile drawers).
+- **Focused Test Coverage**: Vitest suites cover orbital overlap analytics (`molecularOrbitals.test.ts`) and the bonding sampler/cache behaviour (`molecularBondingSampler.test.ts`); quantum-engine integration tests run via `npm run test --workspace @bio-sim/quantum-engine`.
+
 ## Getting Started
 
 > Requires Node.js ≥ 18.17 (for built-in `node:test`, WebSocket global, and `crypto.randomUUID`).
@@ -51,10 +59,32 @@ This repository contains the first implementation slice for the interactive atom
 
 5. Request a status snapshot after connecting by using the **Pull Diagnostics** button in the UI. Atomic selection updates fire engine status cards and append to the event log in real time.
 
+6. **Explore the Molecular View**:
+   - Switch the selector in the left panel to *Molecular (H-H Bonding)*.
+   - Adjust the bond-length slider or toggle σ ↔ σ\* to see phase-aware colouring.
+   - Enable *Density Surface* to stream a marching-cubes iso-surface (performance mode lowers resolution automatically).
+
 ## Testing
 
-- The simulation director includes a lightweight `node:test` spec that validates bootstrap fan-out.
-- Additional unit tests can be added alongside TypeScript sources; execute them with:
+- Lint all workspaces:
+
+  ```bash
+  npm run lint
+  ```
+
+- Run the quantum-engine suite (hydrogen-like + integration tests):
+
+  ```bash
+  npm run test --workspace @bio-sim/quantum-engine
+  ```
+
+- Execute the molecular bonding unit tests (UI workspace):
+
+  ```bash
+  npm run test --workspace apps/ui -- src/__tests__/physics
+  ```
+
+- The simulation director includes a `node:test` spec that validates websocket bootstrap fan-out:
 
   ```bash
   npm run build --workspace services/simulation-director

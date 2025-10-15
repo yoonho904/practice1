@@ -1,12 +1,9 @@
-import * as THREE from 'three';
 import { WaveParticleVisualizer } from '../src/WaveParticleVisualizer';
-import { HydrogenLikeAtom, MethodSelector, QuantumNumbers } from '../../../services/quantum-engine/src/index';
+import type { QuantumNumbers } from '../../../services/quantum-engine/src/index';
+import { HydrogenLikeAtom } from '../../../services/quantum-engine/src/index';
 
 // Simple quantum engine interface for the demo
 class SimpleQuantumEngine {
-  private hydrogenLike = new HydrogenLikeAtom(1);
-  private methodSelector = new MethodSelector();
-
   calculateOrbital(atomicNumber: number, quantumNumbers: QuantumNumbers) {
     // For demo purposes, use hydrogen-like approximation
     const atom = new HydrogenLikeAtom(atomicNumber);
@@ -28,7 +25,7 @@ async function initDemo() {
   const visualizer = new WaveParticleVisualizer(canvas, quantumEngine);
 
   // Setup UI controls
-  setupControls(visualizer, quantumEngine);
+  setupControls(visualizer);
 
   // Initialize with hydrogen 1s orbital
   const initialQuantumNumbers: QuantumNumbers = { n: 1, l: 0, m: 0 };
@@ -43,7 +40,7 @@ async function initDemo() {
   }
 }
 
-function setupControls(visualizer: WaveParticleVisualizer, quantumEngine: SimpleQuantumEngine) {
+function setupControls(visualizer: WaveParticleVisualizer) {
   // Element selection
   const elementSelect = document.getElementById('element') as HTMLSelectElement;
   elementSelect.addEventListener('change', async () => {
@@ -159,9 +156,9 @@ function setupPerformanceMonitoring() {
         fpsDisplay.textContent = `${fps} FPS`;
       }
 
-      if (memoryDisplay && (performance as any).memory) {
-        const memory = (performance as any).memory;
-        const usedMB = Math.round(memory.usedJSHeapSize / 1024 / 1024);
+    const perf = performance as Performance & { memory?: { usedJSHeapSize: number } };
+    if (memoryDisplay && perf.memory) {
+      const usedMB = Math.round(perf.memory.usedJSHeapSize / 1024 / 1024);
         memoryDisplay.textContent = `${usedMB} MB`;
       }
 

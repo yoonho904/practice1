@@ -27,7 +27,7 @@ export interface QuantumMethod {
 /**
  * Method information for validation and metadata
  */
-export interface MethodInfo extends QuantumMethod {}
+export type MethodInfo = QuantumMethod;
 
 /**
  * Intelligent quantum method selector
@@ -198,7 +198,7 @@ export class MethodSelector {
   /**
    * Select method optimized for low computational cost
    */
-  private selectLowCostMethod(atomicNumber: number, accuracy: number): QuantumMethod {
+  private selectLowCostMethod(_atomicNumber: number, _accuracy: number): QuantumMethod {
     // Use semi-empirical methods for low-cost calculations
     return this.methods.get('semi-empirical')!;
   }
@@ -206,7 +206,7 @@ export class MethodSelector {
   /**
    * Escalate to more sophisticated method when previous method failed
    */
-  private escalateMethod(failedMethod: string, atomicNumber: number, accuracy: number): QuantumMethod {
+  private escalateMethod(failedMethod: string, atomicNumber: number, _accuracy: number): QuantumMethod {
     const escalationChain: Record<string, string> = {
       'hartree-fock': 'dft',
       'dft': 'coupled-cluster',

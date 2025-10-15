@@ -100,7 +100,6 @@ describe('Quantum Calculation Workflow Integration', () => {
 
   describe('Performance and Scaling', () => {
     it('should handle multiple calculations efficiently', () => {
-      const selector = new MethodSelector();
       const atom = new HydrogenLikeAtom(1);
 
       const calculations = [

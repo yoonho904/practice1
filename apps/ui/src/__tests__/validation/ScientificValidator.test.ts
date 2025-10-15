@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ScientificValidator } from '../../validation/ScientificValidator';
-import { validateQuantumNumbers, calculateOrbitalEnergy } from '../../constants/PhysicalConstants';
+import { calculateOrbitalEnergy } from '../../constants/PhysicalConstants';
 import { testAtomicData, scientificAssertions } from '../../test-utils/TestingFramework';
 
 describe('ScientificValidator', () => {
@@ -38,7 +38,7 @@ describe('ScientificValidator', () => {
         { n: 1, l: 0, m: 0, electronCount: 3 }  // max 2 electrons per orbital
       ];
 
-      invalidOrbitals.forEach((orbital, index) => {
+      invalidOrbitals.forEach((orbital) => {
         const result = validator.validateOrbital(orbital);
         expect(result.isValid).toBe(false);
         expect(result.errors.length).toBeGreaterThan(0);
@@ -327,8 +327,6 @@ describe('ScientificValidator', () => {
       };
 
       validator.validateOrbital(orbital);
-      const statsBefore = validator.getCacheStats();
-
       validator.clearCache();
       const statsAfter = validator.getCacheStats();
 

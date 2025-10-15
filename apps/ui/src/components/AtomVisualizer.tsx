@@ -1,8 +1,16 @@
 import React from 'react';
 
+interface VisualizerElement {
+  name?: string;
+}
+
+interface VisualizerEnvironment {
+  temperature?: number;
+}
+
 interface AtomVisualizerProps {
-  element?: any;
-  environment?: any;
+  element?: VisualizerElement;
+  environment?: VisualizerEnvironment;
 }
 
 /**
